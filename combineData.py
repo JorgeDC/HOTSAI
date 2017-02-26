@@ -18,6 +18,7 @@ batch_size = 10
 hots_rows, _ = hots_pre.shape
 hots_final = []
 
+print
 
 sys.stdout.write("\rStarting preprocessing")
 should_append = False
