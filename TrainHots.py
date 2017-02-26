@@ -6,8 +6,10 @@ import sys
 
 number_heroes = 63
 number_maps = 14
-number_of_game_types = 4
-number_of_features = (number_heroes * 10) + number_of_game_types + number_maps
+number_of_game_types = 0
+number_of_players = 10
+
+number_of_features = (number_heroes * number_of_players) + number_of_game_types + number_maps + number_of_players
 print(number_of_features)
 result_columns = [number_of_features, number_of_features+1]
 
@@ -31,12 +33,12 @@ train_val_x, test_x = hots_features[:train_val_set_count,:], hots_features[train
 train_val_y, test_y = hots_results[:train_val_set_count,:], hots_results[train_val_set_count:,:]
 
 net = tflearn.input_data([None, number_of_features])
-net = tflearn.fully_connected(net, 300, activation='tanh')
+net = tflearn.fully_connected(net, 20, activation='tanh')
 net = tflearn.fully_connected(net, 2, activation='softmax')
-net = tflearn.regression(net, optimizer='sgd', learning_rate=0.003, loss='categorical_crossentropy')
+net = tflearn.regression(net, optimizer='sgd', learning_rate=0.01, loss='categorical_crossentropy')
 model = tflearn.DNN(net)
 
-model.fit(train_val_x, train_val_y, validation_set=0.1, show_metric=True, batch_size=100, n_epoch=5)
+model.fit(train_val_x, train_val_y, validation_set=0.1, show_metric=True, batch_size=100, n_epoch=3)
 
 model.save("hots_weights")
 
