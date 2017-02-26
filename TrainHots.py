@@ -33,7 +33,7 @@ net = tflearn.fully_connected(net, 2, activation='softmax')
 net = tflearn.regression(net, optimizer='sgd', learning_rate=0.003, loss='categorical_crossentropy')
 model = tflearn.DNN(net)
 
-model.fit(train_val_x, train_val_y, validation_set=0.1, show_metric=True, batch_size=100, n_epoch=2)
+model.fit(train_val_x, train_val_y, validation_set=0.1, show_metric=True, batch_size=100, n_epoch=5)
 
 model.save("hots_weights")
 
