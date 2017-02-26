@@ -33,7 +33,10 @@ should_append = False
 
 export_date_minus_one_month = datetime.strptime(hotslogs_last_month_from_export_date, date_format)
 
-#all_mmr = batch[:, 6]
+all_mmr = hots[:, 6]
+mean, std = all_mmr.mean(), all_mmr.std()
+print(mean)
+print(std)
 
 for start_i in range(0, hots_rows, batch_size):
     end_i = start_i + batch_size
@@ -45,7 +48,8 @@ for start_i in range(0, hots_rows, batch_size):
     if match_date > export_date_minus_one_month:
 
         sorted_batch = batch[batch[:, 2].argsort()]
-        hots_final_row = np.array(np.zeros(number_heroes * 2))
+        hots_final_row = np.array(np.zeros(number_heroes * 10))
+        hots_mmr_row = np.array(np.zeros(10))
         heroes_a_are_winners = np.remainder(start_i, 20) == 0
         heroes_a = []
         heroes_b = []
@@ -57,8 +61,8 @@ for start_i in range(0, hots_rows, batch_size):
             heroes_b = sorted_batch[5:10]  # winners
 
         for start_i_i in range(0, 5):
-            hots_final_row[heroes_a[start_i_i, 1] - 1] = 1
-            hots_final_row[heroes_b[start_i_i, 1] + number_heroes - 1] = 1
+            hots_final_row[heroes_a[start_i_i, 1] + (start_i_i * number_heroes) - 1] = 1
+            hots_final_row[heroes_b[start_i_i, 1] + (number_heroes * 5) + (start_i_i * number_heroes) - 1] = 1
 
 
         maprow = np.zeros(number_maps)

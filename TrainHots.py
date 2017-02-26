@@ -7,6 +7,9 @@ import sys
 number_heroes = 63
 number_maps = 14
 number_of_game_types = 4
+number_of_features = (number_heroes * 10) + number_of_game_types + number_maps
+print(number_of_features)
+result_columns = [number_of_features, number_of_features+1]
 
 data_all = 'hots_final_hot_encoding.csv'
 
@@ -16,8 +19,8 @@ sys.stdout.write("\rSuffling data data")
 np.random.shuffle(hots_all)
 print(hots_all.shape)
 
-hots_results = np.array(hots_all[:,[144, 145]])
-hots_features = np.array(hots_all[:,:144])
+hots_results = np.array(hots_all[:,result_columns])
+hots_features = np.array(hots_all[:,:number_of_features])
 
 num_rows, num_cols = hots_results.shape
 
@@ -27,8 +30,8 @@ train_val_set_count = math.floor((num_rows / 10) * 9)
 train_val_x, test_x = hots_features[:train_val_set_count,:], hots_features[train_val_set_count:,:]
 train_val_y, test_y = hots_results[:train_val_set_count,:], hots_results[train_val_set_count:,:]
 
-net = tflearn.input_data([None, 144])
-net = tflearn.fully_connected(net, 100, activation='tanh')
+net = tflearn.input_data([None, number_of_features])
+net = tflearn.fully_connected(net, 300, activation='tanh')
 net = tflearn.fully_connected(net, 2, activation='softmax')
 net = tflearn.regression(net, optimizer='sgd', learning_rate=0.003, loss='categorical_crossentropy')
 model = tflearn.DNN(net)
