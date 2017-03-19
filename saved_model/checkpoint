@@ -1,2 +1,2 @@
-model_checkpoint_path: "hots_weights"
-all_model_checkpoint_paths: "hots_weights"
+model_checkpoint_path: "tensorflow_hots_model"
+all_model_checkpoint_paths: "tensorflow_hots_model"
