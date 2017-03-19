@@ -3,7 +3,7 @@ import pandas as pd
 import sys
 
 sys.stdout.write("\rData path")
-data_path = 'all_data.csv'
+data_path = 'training_data/all_data.csv'
 sys.stdout.write("\rLoading")
 hots_pre = pd.read_csv(data_path, header=None)
 
@@ -68,5 +68,5 @@ for start_i in range(0, hots_rows, batch_size):
     sys.stdout.write("\rOn row number: %i" % start_i)
 
 sys.stdout.write("\rSaving file")
-np.savetxt('hots_final_hot_encoding.csv', hots_final, fmt='%i', delimiter=",")
+np.savetxt('training_data/hots_final_hot_encoding.csv', hots_final, fmt='%i', delimiter=",")
 sys.stdout.write("\rDone")

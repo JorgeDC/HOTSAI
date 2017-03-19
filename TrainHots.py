@@ -8,7 +8,7 @@ number_heroes = 63
 number_maps = 14
 number_of_game_types = 4
 
-data_all = 'hots_final_hot_encoding.csv'
+data_all = 'training_data/hots_final_hot_encoding.csv'
 
 sys.stdout.write("\rLoading data")
 hots_all = np.array(pd.read_csv(data_all))
@@ -35,7 +35,7 @@ model = tflearn.DNN(net)
 
 model.fit(train_val_x, train_val_y, validation_set=0.1, show_metric=True, batch_size=100, n_epoch=2)
 
-model.save("hots_weights")
+model.save("saved_model/hots_weights")
 
 # Compare the labels that our model predicts with the actual labels
 predictions = (np.array(model.predict(test_x))[:,0] >= 0.5).astype(np.int_)
