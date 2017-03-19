@@ -16,7 +16,7 @@ batch_size = 10
 hots_rows, _ = hots.shape
 hots_final = []
 hots_final_results = []
-number_heroes = 63
+number_heroes = 64
 number_maps = 14
 number_game_mode = 4
 

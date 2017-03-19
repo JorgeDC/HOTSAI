@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import math
 import sys
 
-number_heroes = 63
+number_heroes = 64
 number_maps = 14
 number_of_game_types = 4
 features_count = (number_heroes * 2) + number_maps + number_of_game_types
