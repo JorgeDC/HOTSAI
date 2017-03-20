@@ -2,7 +2,6 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 import math
 import sys
 
@@ -14,8 +13,10 @@ features_count = (number_heroes * 2) + number_maps + number_of_game_types
 number_of_labels = 2
 
 #hyperparameters
-number_of_hidden_nodes_layer1 = 100
-number_of_hidden_nodes_layer2 = 10
+number_of_hidden_nodes_layer1 = 60
+number_of_hidden_nodes_layer2 = 40
+number_of_hidden_nodes_layer3 = 20
+number_of_hidden_nodes_layer4 = 10
 batch_size = 50
 learning_rate = 0.03
 epochs = 2
@@ -39,13 +40,10 @@ val_test_set_count = math.floor((num_rows / 10) * 1)
 train_x, val_x, test_x = hots_features[:train_set_count,:], hots_features[train_set_count:train_set_count+val_test_set_count,:], hots_features[train_set_count+val_test_set_count:,:]
 train_y, val_y, test_y = hots_results[:train_set_count,:], hots_results[train_set_count:train_set_count+val_test_set_count,:], hots_results[train_set_count+val_test_set_count:,:]
 
-print(train_x.shape)
-print(val_x.shape)
-print(test_x.shape)
 
-features = tf.placeholder(tf.float32)
-labels = tf.placeholder(tf.float32)
-keep_prob = tf.placeholder(tf.float32, shape=())
+features = tf.placeholder(tf.float32, name="features")
+labels = tf.placeholder(tf.float32, name="labels")
+keep_prob = tf.placeholder(tf.float32, shape=(), name="keep_prob")
 
 train_feed_dict = {features: train_x, labels: train_y, keep_prob:dropout_keep_prob}
 valid_feed_dict = {features: val_x, labels: val_y, keep_prob:1.0}
@@ -69,6 +67,28 @@ biases_hidden_layer2 = tf.Variable(tf.zeros(number_of_hidden_nodes_layer2))
 
 logits_hidden_layer2 = tf.matmul(hidden_layer, weights_hidden_layer2) + biases_hidden_layer2
 hidden_layer2 = tf.nn.tanh(logits_hidden_layer2)
+#
+# #dropout
+# hidden_layer2 = tf.nn.dropout(hidden_layer2, keep_prob)
+#
+# #layer3
+#
+# weights_hidden_layer3 = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer2, number_of_hidden_nodes_layer3), mean=0.0, stddev=0.1))
+# biases_hidden_layer3 = tf.Variable(tf.zeros(number_of_hidden_nodes_layer3))
+#
+# logits_hidden_layer3 = tf.matmul(hidden_layer2, weights_hidden_layer3) + biases_hidden_layer3
+# hidden_layer3 = tf.nn.tanh(logits_hidden_layer3)
+#
+# #dropout
+# hidden_layer3 = tf.nn.dropout(hidden_layer3, keep_prob)
+#
+# #layer4
+#
+# weights_hidden_layer4 = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer3, number_of_hidden_nodes_layer4), mean=0.0, stddev=0.1))
+# biases_hidden_layer4 = tf.Variable(tf.zeros(number_of_hidden_nodes_layer4))
+#
+# logits_hidden_layer4 = tf.matmul(hidden_layer3, weights_hidden_layer4) + biases_hidden_layer4
+# hidden_layer4 = tf.nn.tanh(logits_hidden_layer4)
 
 #output layer
 weights_prediction = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer2, number_of_labels), mean=0.0, stddev=0.1))
@@ -77,12 +97,15 @@ biases_prediction = tf.Variable(tf.zeros(number_of_labels))
 logits_prediction = tf.matmul(hidden_layer2, weights_prediction) + biases_prediction
 prediction = tf.nn.softmax(logits_prediction)
 
+# Name prediction Tensor, so that is can be loaded from disk after training
+prediction = tf.identity(prediction, name='logits')
+
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prediction, labels=labels))
 
 # Determine if the predictions are correct
 is_correct_prediction = tf.equal(tf.argmax(prediction, 1), tf.argmax(labels, 1))
 # Calculate the accuracy of the predictions
-accuracy = tf.reduce_mean(tf.cast(is_correct_prediction, tf.float32))
+accuracy = tf.reduce_mean(tf.cast(is_correct_prediction, tf.float32), name='accuracy')
 
 optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(cost)
 
@@ -155,6 +178,9 @@ with tf.Session() as session:
 # plt.tight_layout()
 # plt.show()
 
+sys.stdout.write("\rSaving test data")
+np.savetxt('training_data/test_data/test_x.csv', test_x, fmt='%i', delimiter=",")
+np.savetxt('training_data/test_data/test_y.csv', test_y, fmt='%i', delimiter=",")
 print('Validation accuracy at {}'.format(validation_accuracy))
 
 
