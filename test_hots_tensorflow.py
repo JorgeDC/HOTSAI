@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import helper
 import random
+import math
 
 
 save_model_path = 'saved_model/tensorflow_hots_model'
@@ -30,10 +31,15 @@ with tf.Session(graph=loaded_graph) as sess:
     test_batch_acc_total = 0
     test_batch_count = 0
 
-    for train_feature_batch, train_label_batch in helper.batch_features_labels(test_features, test_labels, batch_size):
+    #for train_feature_batch, train_label_batch in helper.batch_features_labels(test_features, test_labels, batch_size):
+    batch_count = int(math.ceil(len(test_features) / batch_size))
+    for batch_i in range(batch_count):
+        batch_start = batch_i * batch_size
+        batch_features = test_features[batch_start:batch_start + batch_size]
+        batch_labels = test_labels[batch_start:batch_start + batch_size]
         test_batch_acc_total += sess.run(
             loaded_acc,
-            feed_dict={loaded_x: train_feature_batch, loaded_y: train_label_batch, loaded_keep_prob: 1.0})
+            feed_dict={loaded_x: batch_features, loaded_y: batch_labels, loaded_keep_prob: 1.0})
         test_batch_count += 1
 
     print('Testing Accuracy: {}\n'.format(test_batch_acc_total / test_batch_count))
