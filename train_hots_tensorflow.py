@@ -12,6 +12,9 @@ features_count = (number_heroes * 2) + number_maps + number_of_game_types
 
 number_of_labels = 2
 
+standard_deviation = 1 / np.sqrt(features_count)
+print(standard_deviation)
+
 #hyperparameters
 number_of_hidden_nodes_layer1 = 60
 number_of_hidden_nodes_layer2 = 40
@@ -51,7 +54,7 @@ test_feed_dict = {features: test_x, labels: test_y, keep_prob:1.0}
 
 #layer1
 
-weights_hidden_layer = tf.Variable(tf.truncated_normal((features_count, number_of_hidden_nodes_layer1), mean=0.0, stddev=0.1))
+weights_hidden_layer = tf.Variable(tf.truncated_normal((features_count, number_of_hidden_nodes_layer1), mean=0.0, stddev=standard_deviation))
 biases_hidden_layer = tf.Variable(tf.zeros(number_of_hidden_nodes_layer1))
 
 logits_hidden_layer = tf.matmul(features, weights_hidden_layer) + biases_hidden_layer
@@ -62,7 +65,7 @@ hidden_layer = tf.nn.dropout(hidden_layer, keep_prob)
 
 #layer2
 
-weights_hidden_layer2 = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer1, number_of_hidden_nodes_layer2), mean=0.0, stddev=0.1))
+weights_hidden_layer2 = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer1, number_of_hidden_nodes_layer2), mean=0.0, stddev=standard_deviation))
 biases_hidden_layer2 = tf.Variable(tf.zeros(number_of_hidden_nodes_layer2))
 
 logits_hidden_layer2 = tf.matmul(hidden_layer, weights_hidden_layer2) + biases_hidden_layer2
@@ -91,7 +94,7 @@ hidden_layer2 = tf.nn.tanh(logits_hidden_layer2)
 # hidden_layer4 = tf.nn.tanh(logits_hidden_layer4)
 
 #output layer
-weights_prediction = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer2, number_of_labels), mean=0.0, stddev=0.1))
+weights_prediction = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer2, number_of_labels), mean=0.0, stddev=standard_deviation))
 biases_prediction = tf.Variable(tf.zeros(number_of_labels))
 
 logits_prediction = tf.matmul(hidden_layer2, weights_prediction) + biases_prediction
