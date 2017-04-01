@@ -70,28 +70,6 @@ biases_hidden_layer2 = tf.Variable(tf.zeros(number_of_hidden_nodes_layer2))
 
 logits_hidden_layer2 = tf.matmul(hidden_layer, weights_hidden_layer2) + biases_hidden_layer2
 hidden_layer2 = tf.nn.tanh(logits_hidden_layer2)
-#
-# #dropout
-# hidden_layer2 = tf.nn.dropout(hidden_layer2, keep_prob)
-#
-# #layer3
-#
-# weights_hidden_layer3 = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer2, number_of_hidden_nodes_layer3), mean=0.0, stddev=0.1))
-# biases_hidden_layer3 = tf.Variable(tf.zeros(number_of_hidden_nodes_layer3))
-#
-# logits_hidden_layer3 = tf.matmul(hidden_layer2, weights_hidden_layer3) + biases_hidden_layer3
-# hidden_layer3 = tf.nn.tanh(logits_hidden_layer3)
-#
-# #dropout
-# hidden_layer3 = tf.nn.dropout(hidden_layer3, keep_prob)
-#
-# #layer4
-#
-# weights_hidden_layer4 = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer3, number_of_hidden_nodes_layer4), mean=0.0, stddev=0.1))
-# biases_hidden_layer4 = tf.Variable(tf.zeros(number_of_hidden_nodes_layer4))
-#
-# logits_hidden_layer4 = tf.matmul(hidden_layer3, weights_hidden_layer4) + biases_hidden_layer4
-# hidden_layer4 = tf.nn.tanh(logits_hidden_layer4)
 
 #output layer
 weights_prediction = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer2, number_of_labels), mean=0.0, stddev=standard_deviation))
@@ -101,9 +79,11 @@ logits_prediction = tf.matmul(hidden_layer2, weights_prediction) + biases_predic
 prediction = tf.nn.softmax(logits_prediction)
 
 # Name prediction Tensor, so that is can be loaded from disk after training
-prediction = tf.identity(prediction, name='logits')
+prediction = tf.identity(prediction, name='softmax_logits')
 
-cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prediction, labels=labels))
+cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=prediction, labels=labels, name="cross_entropy")
+
+cost = tf.reduce_mean(cross_entropy)
 
 # Determine if the predictions are correct
 is_correct_prediction = tf.equal(tf.argmax(prediction, 1), tf.argmax(labels, 1))

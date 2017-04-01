@@ -24,7 +24,7 @@ with tf.Session(graph=loaded_graph) as sess:
     loaded_x = loaded_graph.get_tensor_by_name('features:0')
     loaded_y = loaded_graph.get_tensor_by_name('labels:0')
     loaded_keep_prob = loaded_graph.get_tensor_by_name('keep_prob:0')
-    loaded_logits = loaded_graph.get_tensor_by_name('logits:0')
+    loaded_logits = loaded_graph.get_tensor_by_name('softmax_logits:0')
     loaded_acc = loaded_graph.get_tensor_by_name('accuracy:0')
 
     # Get accuracy in batches for memory limitations
