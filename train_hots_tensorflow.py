@@ -105,6 +105,8 @@ loss_batch = []
 train_acc_batch = []
 valid_acc_batch = []
 
+# #with tf.Session(config=tf.ConfigProto(allow_growth=True)) as session:
+
 with tf.Session() as session:
     session.run(init)
     batch_count = int(math.ceil(len(train_x) / batch_size))
