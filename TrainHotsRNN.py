@@ -4,11 +4,14 @@ import numpy as np
 from tqdm import tqdm
 import math
 import sys
+from tensorflow.contrib import seq2seq
 
 number_heroes = 64
 number_maps = 14
 number_of_game_types = 4
-features_count = (number_heroes * 2) + number_maps
+features_count = (number_heroes * 11)
+lstm_size = 256
+lstm_layers = 2
 
 number_of_labels = 2
 
@@ -17,15 +20,13 @@ print(standard_deviation)
 
 #hyperparameters
 number_of_hidden_nodes_layer1 = 1000
-number_of_hidden_nodes_layer2 = 500
-number_of_hidden_nodes_layer3 = 200
-number_of_hidden_nodes_layer4 = 100
+
 batch_size = 50
 learning_rate = 0.03
 epochs = 5
 dropout_keep_prob = 1.0
 
-data_all = 'training_data/hots_final_hot_encoding.csv'
+data_all = 'training_data/hots_final_hot_encoding_rnn.csv'
 
 sys.stdout.write("\rLoading data")
 hots_all = np.array(pd.read_csv(data_all))
@@ -44,75 +45,48 @@ train_x, val_x, test_x = hots_features[:train_set_count,:], hots_features[train_
 train_y, val_y, test_y = hots_results[:train_set_count,:], hots_results[train_set_count:train_set_count+val_test_set_count,:], hots_results[train_set_count+val_test_set_count:,:]
 
 
-features = tf.placeholder(tf.float32, name="features")
-labels = tf.placeholder(tf.float32, name="labels")
+features = tf.placeholder(tf.float32, [None, 11, number_heroes], name="features")
+labels = tf.placeholder(tf.int32, [None, 2], name="labels")
 keep_prob = tf.placeholder(tf.float32, shape=(), name="keep_prob")
 
 train_feed_dict = {features: train_x, labels: train_y, keep_prob:dropout_keep_prob}
 valid_feed_dict = {features: val_x, labels: val_y, keep_prob:1.0}
 test_feed_dict = {features: test_x, labels: test_y, keep_prob:1.0}
 
-#layer1
-
-weights_hidden_layer = tf.Variable(tf.truncated_normal((features_count, number_of_hidden_nodes_layer1), mean=0.0, stddev=standard_deviation))
-biases_hidden_layer = tf.Variable(tf.zeros(number_of_hidden_nodes_layer1))
-
-logits_hidden_layer = tf.matmul(features, weights_hidden_layer) + biases_hidden_layer
-hidden_layer = tf.nn.tanh(logits_hidden_layer)
-
-#dropout
-# hidden_layer = tf.nn.dropout(hidden_layer, keep_prob)
-
-#layer2
-
-weights_hidden_layer2 = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer1, number_of_hidden_nodes_layer2), mean=0.0, stddev=standard_deviation))
-biases_hidden_layer2 = tf.Variable(tf.zeros(number_of_hidden_nodes_layer2))
-
-logits_hidden_layer2 = tf.matmul(hidden_layer, weights_hidden_layer2) + biases_hidden_layer2
-hidden_layer2 = tf.nn.tanh(logits_hidden_layer2)
-
-#layer3
-
-weights_hidden_layer3 = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer2, number_of_hidden_nodes_layer3), mean=0.0, stddev=standard_deviation))
-biases_hidden_layer3 = tf.Variable(tf.zeros(number_of_hidden_nodes_layer3))
-
-logits_hidden_layer3 = tf.matmul(hidden_layer2, weights_hidden_layer3) + biases_hidden_layer3
-hidden_layer3 = tf.nn.tanh(logits_hidden_layer3)
+#rnn
 
 
-#layer4
+# Your basic LSTM cell
+lstm = tf.contrib.rnn.BasicLSTMCell(lstm_size)
 
-weights_hidden_layer4 = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer3, number_of_hidden_nodes_layer4), mean=0.0, stddev=standard_deviation))
-biases_hidden_layer4 = tf.Variable(tf.zeros(number_of_hidden_nodes_layer4))
+# Add dropout to the cell
+drop = tf.contrib.rnn.DropoutWrapper(lstm, output_keep_prob=keep_prob)
 
-logits_hidden_layer4 = tf.matmul(hidden_layer3, weights_hidden_layer4) + biases_hidden_layer4
-hidden_layer4 = tf.nn.tanh(logits_hidden_layer4)
+# Stack up multiple LSTM layers, for deep learning
+cell = tf.contrib.rnn.MultiRNNCell([drop] * lstm_layers)
 
+# Getting an initial state of all zeros
+initial_state = cell.zero_state(batch_size, tf.float32)
 
+input_data_shape = tf.shape(features)
+outputs, final_state = tf.nn.dynamic_rnn(cell, features, initial_state=initial_state)
 
-#output layer
-weights_prediction = tf.Variable(tf.truncated_normal((number_of_hidden_nodes_layer4, number_of_labels), mean=0.0, stddev=standard_deviation))
-biases_prediction = tf.Variable(tf.zeros(number_of_labels))
+# Probabilities for generating words
+probs = tf.nn.softmax(outputs, name='probs')
 
-logits_prediction = tf.matmul(hidden_layer4, weights_prediction) + biases_prediction
-prediction = tf.nn.softmax(logits_prediction)
+# Loss function
+cost = seq2seq.sequence_loss(
+    outputs,
+    labels,
+    tf.ones([input_data_shape[0], input_data_shape[1]]))
 
-# Name prediction Tensor, so that is can be loaded from disk after training
-prediction = tf.identity(prediction, name='softmax_logits')
+# Optimizer
+optimizer = tf.train.AdamOptimizer(learning_rate)
 
-cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=prediction, labels=labels, name="cross_entropy")
-
-cost = tf.reduce_mean(cross_entropy)
-
-# Determine if the predictions are correct
-is_correct_prediction = tf.equal(tf.argmax(prediction, 1), tf.argmax(labels, 1))
-# Calculate the accuracy of the predictions
-accuracy = tf.reduce_mean(tf.cast(is_correct_prediction, tf.float32), name='accuracy')
-
-optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(cost)
-
-init = tf.global_variables_initializer()
-
+# Gradient Clipping
+gradients = optimizer.compute_gradients(cost)
+capped_gradients = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gradients]
+train_op = optimizer.apply_gradients(capped_gradients)
 
 # The accuracy measured against the validation set
 validation_accuracy = 0.0
@@ -127,7 +101,7 @@ valid_acc_batch = []
 # #with tf.Session(config=tf.ConfigProto(allow_growth=True)) as session:
 
 with tf.Session() as session:
-    session.run(init)
+    session.run(tf.global_variables_initializer())
     batch_count = int(math.ceil(len(train_x) / batch_size))
 
     for epoch_i in range(epochs):
@@ -142,10 +116,20 @@ with tf.Session() as session:
             batch_features = train_x[batch_start:batch_start + batch_size]
             batch_labels = train_y[batch_start:batch_start + batch_size]
 
+            inputs = [[[]]]
+
+            for feature in batch_features:
+                feature_vector = [[]]
+                for start_i in range(0, 11 * number_heroes, 11):
+                    end_i = start_i + batch_size
+                    cell_vector = feature[start_i:end_i]
+                    feature_vector.append(cell_vector)
+                inputs.append(feature_vector)
+
             # Run optimizer and get loss
             _, l = session.run(
                 [optimizer, cost],
-                feed_dict={features: batch_features, labels: batch_labels, keep_prob:dropout_keep_prob})
+                feed_dict={features: inputs, labels: batch_labels, keep_prob:dropout_keep_prob})
 
         #     # Log every 2000 batches
         #     if not batch_i % log_batch_step:
@@ -214,3 +198,6 @@ print('Validation accuracy at {}'.format(validation_accuracy))
 #
 # assert test_accuracy >= 0.80, 'Test accuracy at {}, should be equal to or greater than 0.80'.format(test_accuracy)
 # print('Nice Job! Test Accuracy is {}'.format(test_accuracy))
+
+
+

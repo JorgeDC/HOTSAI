@@ -62,8 +62,13 @@ for start_i in range(0, hots_rows, batch_size):
         hots_final_row_result[1] = 1
 
 
-    hots_final_row_complete = np.concatenate((hots_final_row, maprow, gamemode_row, hots_final_row_result), axis=0)
-    hots_final.append(hots_final_row_complete)
+
+    # hots_final_row_complete = np.concatenate((hots_final_row, maprow, gamemode_row, hots_final_row_result), axis=0)
+    hots_final_row_complete = np.concatenate((hots_final_row, maprow, hots_final_row_result), axis=0)
+
+    #only HL and TL
+    if game_mode_id == 1 or game_mode_id == 2:
+        hots_final.append(hots_final_row_complete)
 
     sys.stdout.write("\rOn row number: %i" % start_i)
 

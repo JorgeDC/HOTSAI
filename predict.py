@@ -107,9 +107,9 @@ game_mode_name_to_id = {y:x for x,y in game_mode_id_to_name.items()}
 
 #Enemy team - your team - map - game mode
 
-enemy_team = ["ILLIDAN"]
-your_team = []
-map = "CURSED_HOLLOW"
+enemy_team = ["RAGNAROS", "SYLVANAS"]
+your_team = ["LUCIO", "RAGNAROS"]
+map = "HAUNTED_MINES"
 game_mode = "HL"
 
 all_possibilities = []
@@ -119,7 +119,11 @@ your_team_row = np.zeros(number_heroes)
 map_row = np.zeros(number_maps)
 game_mode_row = np.zeros(number_game_mode)
 
-enemy_team_row[heroes_name_to_id["NOVA"]] = 1
+for enemy_hero in enemy_team:
+    print(enemy_hero)
+    enemy_team_row[heroes_name_to_id[enemy_hero]] = 1
+
+
 map_row[map_name_to_id[map]] = 1
 game_mode_row[game_mode_name_to_id[game_mode]] = 1
 print(enemy_team_row)
@@ -127,12 +131,14 @@ print(map_row)
 print(game_mode_row)
 
 for i in range(number_heroes):
-    heroe_your_team_row = np.zeros(number_heroes)
-    heroe_your_team_row[heroes_name_to_id["ABATHUR"]] = 1
-    heroe_your_team_row[i] = 1
-    complete_row = np.concatenate((heroe_your_team_row, enemy_team_row, map_row, game_mode_row), axis=0)
+    hero_your_team_row = np.zeros(number_heroes)
+    hero_your_team_row[i] = 1
+    for friendly_hero in your_team:
+        hero_your_team_row[heroes_name_to_id[friendly_hero]] = 1
+
+    complete_row = np.concatenate((hero_your_team_row, enemy_team_row, map_row), axis=0)
     all_possibilities.append(complete_row)
-    print(complete_row)
+    print(hero_your_team_row)
 
 with tf.Session(graph=loaded_graph) as sess:
     # Load model
@@ -145,11 +151,36 @@ with tf.Session(graph=loaded_graph) as sess:
     loaded_keep_prob = loaded_graph.get_tensor_by_name('keep_prob:0')
     loaded_logits = loaded_graph.get_tensor_by_name('softmax_logits:0')
     results = sess.run(loaded_logits, feed_dict={loaded_x: all_possibilities, loaded_keep_prob: 1.0})
-    results = results[results[:, 0].argsort()]
+
     rows, cols = results.shape
+
+    final_results = np.zeros(shape=(number_heroes, 2))
+    heroes = []
     for i in range(rows):
-        heroe = heroes_id_to_name[i]
-        print(heroe, results[i])
+        hero = heroes_id_to_name[i]
+        heroes.append(hero)
+        row = results[i]
+        #print(hero)
+        #print(row)
+        row[1] = i
+        print(row)
+        final_results[i][0] = row[0]
+        final_results[i][1] = i
+
+        #final_row = row + [i]
+        #new_hero_row = np.append(hero, row)
+        #final_results.append(final_row)
+        #results[i].extend(hero)
+
+    #final_results = np.column_stack((final_results, heroes))
+
+
+    final_results = final_results[final_results[:, 0].argsort()]
+    for i in range(rows):
+        row = final_results[i]
+        print(heroes_id_to_name[row[1]])
+        print(row)
+    #print(final_results)
 
 
 
