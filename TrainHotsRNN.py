@@ -45,8 +45,8 @@ train_x, val_x, test_x = hots_features[:train_set_count,:], hots_features[train_
 train_y, val_y, test_y = hots_results[:train_set_count,:], hots_results[train_set_count:train_set_count+val_test_set_count,:], hots_results[train_set_count+val_test_set_count:,:]
 
 
-features = tf.placeholder(tf.float32, [None, 11, number_heroes], name="features")
-labels = tf.placeholder(tf.int32, [None, 2], name="labels")
+features = tf.placeholder(tf.float32, [batch_size, 11, number_heroes], name="features")
+labels = tf.placeholder(tf.int32, [batch_size, 2], name="labels")
 keep_prob = tf.placeholder(tf.float32, shape=(), name="keep_prob")
 
 train_feed_dict = {features: train_x, labels: train_y, keep_prob:dropout_keep_prob}
@@ -71,22 +71,16 @@ initial_state = cell.zero_state(batch_size, tf.float32)
 input_data_shape = tf.shape(features)
 outputs, final_state = tf.nn.dynamic_rnn(cell, features, initial_state=initial_state)
 
-# Probabilities for generating words
-probs = tf.nn.softmax(outputs, name='probs')
+#print(outputs[:, -1].shape)
+#print(labels.shape)
 
-# Loss function
-cost = seq2seq.sequence_loss(
-    outputs,
-    labels,
-    tf.ones([input_data_shape[0], input_data_shape[1]]))
+predictions = tf.contrib.layers.fully_connected(outputs[:, -1], 2, activation_fn=tf.sigmoid)
+cost = tf.losses.mean_squared_error(labels, predictions)
 
-# Optimizer
-optimizer = tf.train.AdamOptimizer(learning_rate)
+optimizer = tf.train.AdamOptimizer(learning_rate).minimize(cost)
 
-# Gradient Clipping
-gradients = optimizer.compute_gradients(cost)
-capped_gradients = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gradients]
-train_op = optimizer.apply_gradients(capped_gradients)
+correct_pred = tf.equal(tf.cast(tf.round(predictions), tf.int32), labels)
+accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 # The accuracy measured against the validation set
 validation_accuracy = 0.0
@@ -100,10 +94,12 @@ valid_acc_batch = []
 
 # #with tf.Session(config=tf.ConfigProto(allow_growth=True)) as session:
 
+
+
 with tf.Session() as session:
     session.run(tf.global_variables_initializer())
     batch_count = int(math.ceil(len(train_x) / batch_size))
-
+    iteration = 1
     for epoch_i in range(epochs):
 
         # Progress bar
@@ -116,37 +112,42 @@ with tf.Session() as session:
             batch_features = train_x[batch_start:batch_start + batch_size]
             batch_labels = train_y[batch_start:batch_start + batch_size]
 
-            inputs = [[[]]]
+
+            rows, _ = batch_features.shape
+            #inputs = np.empty([rows, 11, number_heroes])
+            inputs = []
+
+            #print(batch_features.shape)
+            #print(batch_labels.shape)
 
             for feature in batch_features:
-                feature_vector = [[]]
-                for start_i in range(0, 11 * number_heroes, 11):
+                feature_vector = np.empty([11, number_heroes])
+                for start_i in range(0, 11 * number_heroes, number_heroes):
                     end_i = start_i + batch_size
                     cell_vector = feature[start_i:end_i]
-                    feature_vector.append(cell_vector)
+                    np.append(feature_vector, cell_vector)
+
+                #np.append(inputs, feature_vector)
                 inputs.append(feature_vector)
 
-            # Run optimizer and get loss
-            _, l = session.run(
-                [optimizer, cost],
-                feed_dict={features: inputs, labels: batch_labels, keep_prob:dropout_keep_prob})
+            inputs = np.array(inputs)
+            #print(inputs.shape)
 
-        #     # Log every 2000 batches
-        #     if not batch_i % log_batch_step:
-        #         # Calculate Training and Validation accuracy
-        #         training_accuracy = session.run(accuracy, feed_dict=train_feed_dict)
-        #         validation_accuracy = session.run(accuracy, feed_dict=valid_feed_dict)
-        #
-        #         # Log batches
-        #         previous_batch = batches[-1] if batches else 0
-        #         batches.append(log_batch_step + previous_batch)
-        #         loss_batch.append(l)
-        #         train_acc_batch.append(training_accuracy)
-        #         valid_acc_batch.append(validation_accuracy)
-        #         print(validation_accuracy)
-        #
-        # # Check accuracy against Validation data
-        # validation_accuracy = session.run(accuracy, feed_dict=valid_feed_dict)
+            # Run optimizer and get loss
+            loss, state, _ = session.run([cost, final_state, optimizer], feed_dict={features: inputs, labels: batch_labels, keep_prob:dropout_keep_prob})
+
+            if iteration % 5 == 0:
+                print("Epoch: {}/{}".format(e, epochs),"Iteration: {}".format(iteration), "Train loss: {:.3f}".format(loss))
+
+            if iteration % 25 == 0:
+                val_acc = []
+                val_state = session.run(cell.zero_state(batch_size, tf.float32))
+                for x, y in get_batches(val_x, val_y, batch_size):
+                    feed = {inputs_: x, labels_: y[:, None], keep_prob: 1,initial_state: val_state}
+                    batch_acc, val_state = session.run([accuracy, final_state], feed_dict=feed)
+                    val_acc.append(batch_acc)
+                print("Val acc: {:.3f}".format(np.mean(val_acc)))
+            iteration += 1
 
     save_model_path = 'saved_model/tensorflow_hots_model'
     saver = tf.train.Saver()
