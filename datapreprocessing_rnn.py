@@ -3,6 +3,7 @@ import pandas as pd
 import sys
 
 sys.stdout.write("\rData path")
+# data_path = 'training_data/all_data_to_test.csv'
 data_path = 'training_data/all_data.csv'
 sys.stdout.write("\rLoading")
 hots_pre = pd.read_csv(data_path, header=None)
@@ -57,7 +58,7 @@ for start_i in range(0, hots_rows, batch_size):
     # hots_final_row =  np.concatenate(hots_heroes_first_team, hots_heroes_second_team)
 
 
-    hots_final_row = np.zeros((10))
+    hots_final_row = np.zeros(10)
 
     for start_i_i in range(0, 10):
 
@@ -95,7 +96,7 @@ for start_i in range(0, hots_rows, batch_size):
         #hots_final_row = hots_final_row.append(heroe_id)
         #hots_final_row = np.concatenate((hots_final_row, heroe_id), axis=0)
 
-
+    #print(hots_final_row)
 
     maprow = np.zeros(number_heroes) #number of heroes and padded with 0 behind the vector
     map_id = sorted_batch[0,4] - 1001
@@ -113,8 +114,9 @@ for start_i in range(0, hots_rows, batch_size):
 
 
     # hots_final_row_complete = np.concatenate((hots_final_row, maprow, gamemode_row, hots_final_row_result), axis=0)
-    hots_final_row_complete = np.concatenate(([map_id], hots_final_row, hots_final_row_result), axis=0)
-
+    # hots_final_row_complete = np.concatenate(([map_id], hots_final_row, hots_final_row_result), axis=0)
+    hots_final_row_complete = np.concatenate((hots_final_row, hots_final_row_result), axis=0)
+    # print(hots_final_row_complete)
     #only HL and TL
     if game_mode_id == 1 or game_mode_id == 2:
         hots_final.append(hots_final_row_complete)

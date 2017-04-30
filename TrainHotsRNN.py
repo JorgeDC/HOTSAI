@@ -9,10 +9,10 @@ from tensorflow.contrib import seq2seq
 number_heroes = 64
 number_maps = 14
 number_of_game_types = 4
-features_count = 11
-lstm_size = 32
-lstm_layers = 2
-embed_size = 20
+features_count = 10
+lstm_size = 64
+lstm_layers = 1
+embed_size = 30
 
 number_of_labels = 2
 
@@ -22,7 +22,7 @@ print(standard_deviation)
 #hyperparameters
 number_of_hidden_nodes_layer1 = 1000
 
-batch_size = 50
+batch_size = 250
 learning_rate = 0.003
 epochs = 1
 dropout_keep_prob = 1.0
@@ -34,7 +34,7 @@ hots_all = np.array(pd.read_csv(data_all))
 sys.stdout.write("\rShuffling data")
 np.random.shuffle(hots_all)
 
-hots_results = np.array(hots_all[:,[features_count, features_count+1]])
+hots_results = np.array(hots_all[:,[features_count, features_count]])
 hots_features = np.array(hots_all[:,:features_count])
 
 num_rows, num_cols = hots_results.shape
@@ -46,7 +46,7 @@ train_x, val_x, test_x = hots_features[:train_set_count,:], hots_features[train_
 train_y, val_y, test_y = hots_results[:train_set_count,:], hots_results[train_set_count:train_set_count+val_test_set_count,:], hots_results[train_set_count+val_test_set_count:,:]
 
 
-features = tf.placeholder(tf.int32, [None, 11], name="features")
+features = tf.placeholder(tf.int32, [None, features_count], name="features")
 labels = tf.placeholder(tf.int32, [None, 2], name="labels")
 keep_prob = tf.placeholder(tf.float32, shape=(), name="keep_prob")
 
@@ -71,29 +71,10 @@ initial_state = cell.zero_state(batch_size, tf.float32)
 
 input_data_shape = tf.shape(features)
 
-#reshaped_featues = tf.reshape(features, [batch_size*11, number_heroes])
-#print(reshaped_featues)
 embedding = tf.Variable(tf.random_uniform([number_heroes, embed_size], -1, 1))
-print(embedding)
 embed = tf.nn.embedding_lookup(embedding, features)
 
-print(embed)
-#reshaped_embed = tf.reshape(embed, [batch_size, 11, embed_size])
-
-#print(reshaped_embed)
-
 outputs, final_state = tf.nn.dynamic_rnn(cell, embed, initial_state=initial_state)
-
-#print(outputs[:, -1].shape)
-#print(labels.shape)
-
-# predictions = tf.contrib.layers.fully_connected(outputs[:, -1], 2, activation_fn=tf.sigmoid)
-# cost = tf.losses.mean_squared_error(labels, predictions)
-#
-# optimizer = tf.train.AdamOptimizer(learning_rate).minimize(cost)
-#
-# correct_pred = tf.equal(tf.cast(tf.round(predictions), tf.int32), labels)
-# accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 #output layer
 weights_prediction = tf.Variable(tf.truncated_normal((lstm_size, number_of_labels), mean=0.0, stddev=standard_deviation))
@@ -103,10 +84,8 @@ logits_prediction = tf.matmul(outputs[:, -1], weights_prediction) + biases_predi
 prediction = tf.nn.softmax(logits_prediction)
 
 # Name prediction Tensor, so that is can be loaded from disk after training
-prediction = tf.identity(prediction, name='softmax_logits')
-
+prediction = tf.identity(prediction, name='prediction')
 cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=prediction, labels=labels, name="cross_entropy")
-
 cost = tf.reduce_mean(cross_entropy)
 
 # Determine if the predictions are correct
