@@ -34,7 +34,7 @@ hots_all = np.array(pd.read_csv(data_all))
 sys.stdout.write("\rShuffling data")
 np.random.shuffle(hots_all)
 
-hots_results = np.array(hots_all[:,[features_count, features_count]])
+hots_results = np.array(hots_all[:,[features_count, features_count+1]])
 hots_features = np.array(hots_all[:,:features_count])
 
 num_rows, num_cols = hots_results.shape
