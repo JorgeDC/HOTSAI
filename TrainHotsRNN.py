@@ -12,6 +12,7 @@ number_of_game_types = 4
 features_count = (number_heroes * 11)
 lstm_size = 256
 lstm_layers = 2
+embed_size = 20
 
 number_of_labels = 2
 
@@ -45,8 +46,8 @@ train_x, val_x, test_x = hots_features[:train_set_count,:], hots_features[train_
 train_y, val_y, test_y = hots_results[:train_set_count,:], hots_results[train_set_count:train_set_count+val_test_set_count,:], hots_results[train_set_count+val_test_set_count:,:]
 
 
-features = tf.placeholder(tf.float32, [batch_size, 11, number_heroes], name="features")
-labels = tf.placeholder(tf.int32, [batch_size, 2], name="labels")
+features = tf.placeholder(tf.int32, [None, 11, number_heroes], name="features")
+labels = tf.placeholder(tf.int32, [None, 2], name="labels")
 keep_prob = tf.placeholder(tf.float32, shape=(), name="keep_prob")
 
 train_feed_dict = {features: train_x, labels: train_y, keep_prob:dropout_keep_prob}
@@ -69,7 +70,19 @@ cell = tf.contrib.rnn.MultiRNNCell([drop] * lstm_layers)
 initial_state = cell.zero_state(batch_size, tf.float32)
 
 input_data_shape = tf.shape(features)
-outputs, final_state = tf.nn.dynamic_rnn(cell, features, initial_state=initial_state)
+
+reshaped_featues = tf.reshape(features, [batch_size*11, number_heroes])
+print(reshaped_featues)
+embedding = tf.Variable(tf.random_uniform([number_heroes, embed_size], -1, 1))
+print(embedding)
+embed = tf.nn.embedding_lookup(embedding, reshaped_featues)
+
+print(embed)
+reshaped_embed = tf.reshape(embed, [batch_size, 11, embed_size])
+
+print(reshaped_embed)
+
+outputs, final_state = tf.nn.dynamic_rnn(cell, reshaped_embed, initial_state=initial_state)
 
 #print(outputs[:, -1].shape)
 #print(labels.shape)
@@ -94,57 +107,63 @@ valid_acc_batch = []
 
 # #with tf.Session(config=tf.ConfigProto(allow_growth=True)) as session:
 
+def getBatches(batch_x, batch_y, b_size=100):
+    number_features = batch_y.shape[0]
+    number_of_batches = np.floor(number_features/b_size).astype(np.int)
+    print(number_of_batches)
+    # The training cycle
+    for batch_i in range(number_of_batches):
+        # Get a batch of training features and labels
+        batch_start = batch_i * b_size
+        batch_features = batch_x[batch_start:batch_start + b_size]
+        batch_labels = batch_y[batch_start:batch_start + b_size]
 
+        rows, _ = batch_features.shape
+        # inputs = np.empty([rows, 11, number_heroes])
+        inputs = []
+
+        # print(batch_features.shape)
+        # print(batch_labels.shape)
+
+        for feature in batch_features:
+            feature_vector = np.empty([11, number_heroes])
+            for start_i in range(0, 11 * number_heroes, number_heroes):
+                end_i = start_i + b_size
+                cell_vector = feature[start_i:end_i]
+                np.append(feature_vector, cell_vector)
+
+            # np.append(inputs, feature_vector)
+            inputs.append(feature_vector)
+
+        inputs = np.array(inputs)
+        yield inputs, batch_labels
 
 with tf.Session() as session:
     session.run(tf.global_variables_initializer())
-    batch_count = int(math.ceil(len(train_x) / batch_size))
     iteration = 1
     for epoch_i in range(epochs):
 
-        # Progress bar
-        batches_pbar = tqdm(range(batch_count), desc='Epoch {:>2}/{}'.format(epoch_i + 1, epochs), unit='batches')
-
-        # The training cycle
-        for batch_i in batches_pbar:
-            # Get a batch of training features and labels
-            batch_start = batch_i * batch_size
-            batch_features = train_x[batch_start:batch_start + batch_size]
-            batch_labels = train_y[batch_start:batch_start + batch_size]
-
-
-            rows, _ = batch_features.shape
-            #inputs = np.empty([rows, 11, number_heroes])
-            inputs = []
-
-            #print(batch_features.shape)
-            #print(batch_labels.shape)
-
-            for feature in batch_features:
-                feature_vector = np.empty([11, number_heroes])
-                for start_i in range(0, 11 * number_heroes, number_heroes):
-                    end_i = start_i + batch_size
-                    cell_vector = feature[start_i:end_i]
-                    np.append(feature_vector, cell_vector)
-
-                #np.append(inputs, feature_vector)
-                inputs.append(feature_vector)
-
-            inputs = np.array(inputs)
-            #print(inputs.shape)
+         for x, y in getBatches(train_x, train_y, batch_size):
 
             # Run optimizer and get loss
-            loss, state, _ = session.run([cost, final_state, optimizer], feed_dict={features: inputs, labels: batch_labels, keep_prob:dropout_keep_prob})
+            #print(x.shape)
+            #print(y.shape)
+            #print(dropout_keep_prob)
+            loss, state, _ = session.run([cost, final_state, optimizer], feed_dict={features: x, labels: y, keep_prob:dropout_keep_prob})
+            print(loss)
 
-            if iteration % 5 == 0:
-                print("Epoch: {}/{}".format(e, epochs),"Iteration: {}".format(iteration), "Train loss: {:.3f}".format(loss))
+            if iteration % 500 == 0:
+                print("Epoch: {}/{}".format(epoch_i, epochs),"Iteration: {}".format(iteration), "Train loss: {:.3f}".format(loss))
 
-            if iteration % 25 == 0:
+            if iteration % 2500 == 0:
                 val_acc = []
                 val_state = session.run(cell.zero_state(batch_size, tf.float32))
-                for x, y in get_batches(val_x, val_y, batch_size):
-                    feed = {inputs_: x, labels_: y[:, None], keep_prob: 1,initial_state: val_state}
+                for x_val, y_val in getBatches(val_x, val_y, batch_size):
+                    print(x_val.shape)
+                    print(y_val.shape)
+                    feed = {features: x_val, labels: y_val, keep_prob: 1.0}
                     batch_acc, val_state = session.run([accuracy, final_state], feed_dict=feed)
+                    print(batch_acc)
                     val_acc.append(batch_acc)
                 print("Val acc: {:.3f}".format(np.mean(val_acc)))
             iteration += 1
@@ -153,52 +172,8 @@ with tf.Session() as session:
     saver = tf.train.Saver()
     save_path = saver.save(session, save_model_path)
 
-# loss_plot = plt.subplot(211)
-# loss_plot.set_title('Loss')
-# loss_plot.plot(batches, loss_batch, 'g')
-# loss_plot.set_xlim([batches[0], batches[-1]])
-# acc_plot = plt.subplot(212)
-# acc_plot.set_title('Accuracy')
-# acc_plot.plot(batches, train_acc_batch, 'r', label='Training Accuracy')
-# acc_plot.plot(batches, valid_acc_batch, 'x', label='Validation Accuracy')
-# acc_plot.set_ylim([0, 1.0])
-# acc_plot.set_xlim([batches[0], batches[-1]])
-# acc_plot.legend(loc=4)
-# plt.tight_layout()
-# plt.show()
 
 sys.stdout.write("\rSaving test data")
 np.savetxt('training_data/test_data/test_x.csv', test_x, fmt='%i', delimiter=",")
 np.savetxt('training_data/test_data/test_y.csv', test_y, fmt='%i', delimiter=",")
 print('Validation accuracy at {}'.format(validation_accuracy))
-
-
-# test_accuracy = 0.0
-#
-# with tf.Session() as session:
-#     session.run(init)
-#     batch_count = int(math.ceil(len(train_x) / batch_size))
-#
-#     for epoch_i in range(epochs):
-#
-#         # Progress bar
-#         batches_pbar = tqdm(range(batch_count), desc='Epoch {:>2}/{}'.format(epoch_i + 1, epochs), unit='batches')
-#
-#         # The training cycle
-#         for batch_i in batches_pbar:
-#             # Get a batch of training features and labels
-#             batch_start = batch_i * batch_size
-#             batch_features = train_x[batch_start:batch_start + batch_size]
-#             batch_labels = train_x[batch_start:batch_start + batch_size]
-#
-#             # Run optimizer
-#             _ = session.run(optimizer, feed_dict={features: batch_features, labels: batch_labels})
-#
-#         # Check accuracy against Test data
-#         test_accuracy = session.run(accuracy, feed_dict=test_feed_dict)
-#
-# assert test_accuracy >= 0.80, 'Test accuracy at {}, should be equal to or greater than 0.80'.format(test_accuracy)
-# print('Nice Job! Test Accuracy is {}'.format(test_accuracy))
-
-
-
