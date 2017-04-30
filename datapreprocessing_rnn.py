@@ -32,7 +32,12 @@ for start_i in range(0, hots_rows, batch_size):
     batch = hots[start_i:end_i]
 
     sorted_batch = batch[batch[:, 2].argsort()]
-    first_team_are_winners = np.remainder(start_i, 20) == 1
+    first_team_are_winners = np.remainder(start_i, 20) == 0
+
+    if first_team_are_winners:
+        first_team_are_winners = 0
+    else:
+        first_team_are_winners = 1
 
     first_team = sorted_batch[0:5]
     second_team = sorted_batch[5:10]
@@ -52,43 +57,43 @@ for start_i in range(0, hots_rows, batch_size):
     # hots_final_row =  np.concatenate(hots_heroes_first_team, hots_heroes_second_team)
 
 
-    hots_final_row = []
+    hots_final_row = np.zeros((10))
 
     for start_i_i in range(0, 10):
 
-        hots_heroe_team = np.array(np.zeros(number_heroes))
+        heroe_id = 0
         if start_i_i == 0:
-            hots_heroe_team[first_team[0, 1] - 1] = 1
+            hots_final_row[0] = first_team[0, 1] - 1
 
         if start_i_i == 1:
-            hots_heroe_team[second_team[0, 1] - 1] = 1
+            hots_final_row[1] = second_team[0, 1] - 1
 
         if start_i_i == 2:
-            hots_heroe_team[second_team[1, 1] - 1] = 1
+            hots_final_row[2] = second_team[1, 1 ]- 1
 
         if start_i_i == 3:
-            hots_heroe_team[first_team[1, 1] - 1] = 1
+            hots_final_row[3] = first_team[1, 1] - 1
 
         if start_i_i == 4:
-            hots_heroe_team[first_team[2, 1] - 1] = 1
+            hots_final_row[4] = first_team[2, 1] - 1
 
         if start_i_i == 5:
-            hots_heroe_team[second_team[2, 1] - 1] = 1
+            hots_final_row[5] = second_team[2, 1] - 1
 
         if start_i_i == 6:
-            hots_heroe_team[second_team[3, 1] - 1] = 1
+            hots_final_row[6] = second_team[3, 1] - 1
 
         if start_i_i == 7:
-            hots_heroe_team[first_team[3, 1] - 1] = 1
+            hots_final_row[7] = first_team[3, 1] - 1
 
         if start_i_i == 8:
-            hots_heroe_team[first_team[4, 1] - 1] = 1
+            hots_final_row[8] = first_team[4, 1] - 1
 
         if start_i_i == 9:
-            hots_heroe_team[second_team[4, 1] - 1] = 1
+            hots_final_row[9] = second_team[4, 1] - 1
 
-
-        hots_final_row = np.concatenate((hots_final_row, hots_heroe_team), axis=0)
+        #hots_final_row = hots_final_row.append(heroe_id)
+        #hots_final_row = np.concatenate((hots_final_row, heroe_id), axis=0)
 
 
 
@@ -108,7 +113,7 @@ for start_i in range(0, hots_rows, batch_size):
 
 
     # hots_final_row_complete = np.concatenate((hots_final_row, maprow, gamemode_row, hots_final_row_result), axis=0)
-    hots_final_row_complete = np.concatenate((maprow, hots_final_row, hots_final_row_result), axis=0)
+    hots_final_row_complete = np.concatenate(([map_id], hots_final_row, hots_final_row_result), axis=0)
 
     #only HL and TL
     if game_mode_id == 1 or game_mode_id == 2:
